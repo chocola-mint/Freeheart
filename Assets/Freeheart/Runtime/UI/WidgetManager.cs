@@ -23,8 +23,6 @@ namespace Freeheart.UI
         public UnityEvent onShow, onHide;
         [SerializeField]
         private bool silenceWarning = false;
-        [SerializeField]
-        private bool suppressSelectables = false;
         private void Reset() 
         {
             TryGetComponent<GraphicRaycaster>(out graphicRaycaster);
@@ -46,6 +44,7 @@ namespace Freeheart.UI
                 if(!silenceWarning) Debug.LogWarning("Detected cycle.");
                 return;
             }
+            if(!node.isIdle) return; // Target isn't idle. Don't interrupt.
             if(path.Count == 0) 
             {
                 path.Add(node);
@@ -54,6 +53,7 @@ namespace Freeheart.UI
             else
             {
                 var prevNode = path[^1];
+                if(!prevNode.isIdle) return; // prevNode isn't idle. Don't interrupt.
                 path.Add(node);
                 MakeTransition(nodeToHide: prevNode, nodeToShow: node);
             }
@@ -67,28 +67,18 @@ namespace Freeheart.UI
             }
             var curNode = path[^1];
             var prevNode = path[^2];
+            if(!curNode.isIdle || !prevNode.isIdle) return; // Don't interrupt.
             path.RemoveAt(path.Count - 1);
             MakeTransition(nodeToHide: curNode, nodeToShow: prevNode);
-        }
-        public void ReturnAndGoTo(WidgetNode node)
-        {
-            if(path.Count == 0)
-            {
-                GoTo(node);
-                return;
-            }
-            if(path[^1] == node) return;
-            Return();
-            GoTo(node);
         }
         private void MakeTransition(WidgetNode nodeToHide = null, WidgetNode nodeToShow = null)
         {
             if(checkIdleCoroutine != null) StopCoroutine(checkIdleCoroutine);
-            checkIdleCoroutine = StartCoroutine(CheckIdle(nodeToHide, nodeToShow));
+            checkIdleCoroutine = StartCoroutine(CoroMakeTransition(nodeToHide, nodeToShow));
         }
 
 
-        IEnumerator CheckIdle(WidgetNode nodeToHide = null, WidgetNode nodeToShow = null)
+        IEnumerator CoroMakeTransition(WidgetNode nodeToHide = null, WidgetNode nodeToShow = null)
         {
             isIdle = false;
             if(nodeToHide) nodeToHide.Hide();
@@ -110,11 +100,6 @@ namespace Freeheart.UI
             path.Add(defaultNode);
             Debug.Log($"Showing {defaultNode.gameObject.name}");
             MakeTransition(nodeToShow: defaultNode);
-            if(suppressSelectables)
-            { 
-                foreach(var selectable in GetComponentsInChildren<Selectable>()) selectable.interactable = true;
-                foreach(var e in GetComponentsInChildren<EventTrigger>()) e.enabled = true;
-            }
         }
 
         public override void Hide()
@@ -125,11 +110,6 @@ namespace Freeheart.UI
             Debug.Log("WidgetManager hide");
             MakeTransition(nodeToHide: path[^1]);
             path.Clear();
-            if(suppressSelectables) 
-            {
-                foreach(var selectable in GetComponentsInChildren<Selectable>()) selectable.interactable = false;
-                foreach(var e in GetComponentsInChildren<EventTrigger>()) e.enabled = false;
-            }
         }
     }
 }

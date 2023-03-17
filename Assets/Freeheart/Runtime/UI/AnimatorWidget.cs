@@ -9,12 +9,12 @@ namespace Freeheart.UI
     public class AnimatorWidget : WidgetNode
     {
         [ShowInInspector, ReadOnly, SerializeField]
-        [InfoBox("The Animator Controller should have a \"Show\" state and a \"Hide\" state.")]
+        [InfoBox("The Animator Controller should have a \"SHOW\" state and a \"HIDE\" state.")]
         private Animator animator;
         private static class AnimStates
         {
-            public static readonly int Show = Animator.StringToHash(nameof(Show));
-            public static readonly int Hide = Animator.StringToHash(nameof(Hide));
+            public static readonly int SHOW = Animator.StringToHash(nameof(SHOW));
+            public static readonly int HIDE = Animator.StringToHash(nameof(HIDE));
         }
         void Reset() 
         {
@@ -23,28 +23,28 @@ namespace Freeheart.UI
         void Awake()
         {
             if(!animator) animator = GetComponent<Animator>();
-            animator.Play(AnimStates.Hide, layer: 0, normalizedTime: 1);
+            animator.Play(AnimStates.HIDE, layer: 0, normalizedTime: 1);
         }
         void Start()
         {
         
         }
-        void Update()
+        void LateUpdate()
         {
-            isIdle = animator.GetNextAnimatorStateInfo(0).normalizedTime <= 0
+            isIdle = animator.GetAnimatorTransitionInfo(0).normalizedTime <= 0
             && animator.GetCurrentAnimatorStateInfo(0).normalizedTime >= 1;
         }
         public override void Show()
         {
-            if(isVisible) return;
-            animator.CrossFade(AnimStates.Show, 1, 0, 0);
+            if(isVisible || !isIdle) return;
+            animator.CrossFade(AnimStates.SHOW, 1, 0, 0);
             isIdle = false;
             isVisible = true;
         }
         public override void Hide()
         {
-            if(!isVisible) return;
-            animator.CrossFade(AnimStates.Hide, 1, 0, 0);
+            if(!isVisible || !isIdle) return;
+            animator.CrossFade(AnimStates.HIDE, 1, 0, 0);
             isIdle = false;
             isVisible = false;
         }
